@@ -5,31 +5,29 @@ PrefabFiles = {
     "lasagna",
 }
 
+-- Portrait textures preloaded as IMAGE only.
+-- ATLAS assets are NOT preloaded here because the C++ engine resolves the texture
+-- filename from the XML's <Texture filename="garfield.tex"/> using bare-name lookup,
+-- which fails for mod subdirectory paths. The screens load atlases lazily via
+-- SetTexture(xmlpath, elem) at display time, so preloading ATLAS is not needed.
 Assets = {
-    -- Save slot portrait
-    Asset("IMAGE", "images/saveslot_portraits/garfield.tex"),
-    Asset("ATLAS", "images/saveslot_portraits/garfield.xml"),
-
-    -- Character select screen
-    Asset("IMAGE", "images/selectscreen_portraits/garfield.tex"),
-    Asset("ATLAS", "images/selectscreen_portraits/garfield.xml"),
-
-    -- Large portrait (in-game sidebar)
-    Asset("IMAGE", "images/bigportraits/garfield.tex"),
-    Asset("ATLAS", "images/bigportraits/garfield.xml"),
-
-    -- Character name plate on select screen
-    Asset("IMAGE", "images/names_garfield.tex"),
-    Asset("ATLAS", "images/names_garfield.xml"),
+    Asset("IMAGE", "saveslot_portraits/garfield.tex"),
+    Asset("IMAGE", "selectscreen_portraits/garfield.tex"),
+    Asset("IMAGE", "bigportraits/garfield.tex"),
 }
 
 -- Register Garfield as a playable character
 AddModCharacter("garfield", "MALE")
 
--- Load speech strings
+-- DS mod env is sandboxed; globals must be accessed via GLOBAL.
+local STRINGS  = GLOBAL.STRINGS
+local require  = GLOBAL.require
+
 STRINGS.CHARACTERS.GARFIELD = require("speech_garfield")
 
--- Load Lasagna food strings
+STRINGS.CHARACTER_TITLES.garfield       = "The Cat"
+STRINGS.CHARACTER_DESCRIPTIONS.garfield = "*Loves lasagna\n*Hates Mondays\n*Perpetually unimpressed"
+
 STRINGS.NAMES.LASAGNA = "Lasagna"
 STRINGS.RECIPE_DESC.LASAGNA = "A perfect dish. Garfield approves."
 STRINGS.CHARACTERS.GENERIC.DESCRIBE.LASAGNA = "That's a beautiful sight."

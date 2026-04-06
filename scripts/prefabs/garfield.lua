@@ -1,4 +1,8 @@
--- Garfield character prefab for Don't Starve
+-- Garfield character prefab for Don't Starve (base game + RoG)
+--
+-- DS's MakePlayerCharacter signature:
+--   MakePlayerCharacter(name, customprefabs, customassets, customfn, starting_inventory)
+-- customfn(inst) is called once — no client/master split like DST.
 
 local MakePlayerCharacter = require("prefabs/player_common")
 
@@ -8,21 +12,17 @@ local assets = {
 }
 
 local start_inv = {
-    -- Garfield starts with a piece of meat because of course he does
-    "morsels",
+    "morsels",  -- Garfield starts with a piece of meat. Obviously.
 }
 
--- How often Monday Blues wears off (in seconds; roughly one game-day = 480s)
-local MONDAY_BLUES_DURATION = 480
+local MONDAY_BLUES_DURATION = 480  -- ~one game-day in seconds
 
 -- -------------------------------------------------------------------
 -- Monday Blues
--- Applied at the start of every 7th game-day (day 1, 8, 15, …)
--- Effect: -10 sanity immediately, 20% speed penalty for the day
 -- -------------------------------------------------------------------
 local function ApplyMondayBlues(inst)
     if inst.components.talker then
-        inst.components.talker:Say(STRINGS.CHARACTERS.GARFIELD.MONDAY_ANNOUNCE or "Ugh. Monday.")
+        inst.components.talker:Say("I hate Mondays.")
     end
     inst.components.sanity:DoDelta(-10, true)
 
@@ -30,7 +30,6 @@ local function ApplyMondayBlues(inst)
     inst.components.locomotor.walkspeed = TUNING.WILSON_WALK_SPEED * 0.7
     inst.components.locomotor.runspeed  = TUNING.WILSON_RUN_SPEED  * 0.7
 
-    -- Wear off after one full game-day
     if inst._monday_task then inst._monday_task:Cancel() end
     inst._monday_task = inst:DoTaskInTime(MONDAY_BLUES_DURATION, function(inst)
         inst._monday_blues = false
@@ -40,75 +39,58 @@ local function ApplyMondayBlues(inst)
 end
 
 local function OnNewDay(inst)
-    -- TheWorld.state.cycles counts completed days (0-indexed).
-    -- Day 1 = cycles 0, day 8 = cycles 7, etc.  cycles % 7 == 0 catches them all.
-    local cycles = TheWorld ~= nil and TheWorld.state ~= nil and TheWorld.state.cycles or 0
-    if cycles % 7 == 0 then
+    -- GetClock() is the DS API for the world clock (no TheWorld in base DS)
+    local clock = GetClock and GetClock()
+    local day = clock and clock:GetNumCycles() or 0
+    if day % 7 == 0 then
         ApplyMondayBlues(inst)
     end
 end
 
 -- -------------------------------------------------------------------
--- Eating hooks
+-- Eating bonus
 -- -------------------------------------------------------------------
 local function OnEatFood(inst, food)
     if food == nil then return end
-
-    -- Bonus hunger for cooked foods (Garfield loves a proper meal)
     if food:HasTag("cooked") and inst.components.hunger then
         inst.components.hunger:DoDelta(20)
     end
-
-    -- Special message for lasagna
     if food.prefab == "lasagna" and inst.components.talker then
-        local lines = STRINGS.CHARACTERS.GARFIELD.EAT_LASAGNA or {}
-        if #lines > 0 then
-            inst.components.talker:Say(lines[math.random(#lines)])
-        end
+        local lines = {
+            "Now THAT'S what I call survival.",
+            "This makes it all worth it.",
+            "I feel like a new cat. A very full new cat.",
+        }
+        inst.components.talker:Say(lines[math.random(#lines)])
     end
 end
 
 -- -------------------------------------------------------------------
--- Common post-init (runs on all clients)
+-- Single postinit (DS has no client/server split in customfn)
 -- -------------------------------------------------------------------
-local function common_postinit(inst)
-    -- Use wilson's sound bank as the fallback while custom audio isn't ready
+local function postinit(inst)
+    -- ---- Appearance ----
     inst.soundsname = "wilson"
 
-    -- Tag used by other systems to identify Garfield
-    inst:AddTag("garfield")
-    -- Cats eat anything without getting sick
-    inst:AddTag("strongstomach")
-end
+    -- Orange fur: DS sprites are white/grey, tinted at render time.
+    -- #EF8322 ≈ (0.94, 0.51, 0.13)
+    inst.AnimState:SetMultColour(0.94, 0.51, 0.13, 1.0)
+    inst.AnimState:SetScale(1.1, 1.1, 1.1)
 
--- -------------------------------------------------------------------
--- Master post-init (runs only on the server / singleplayer host)
--- -------------------------------------------------------------------
-local function master_postinit(inst)
+    -- ---- Tags ----
+    inst:AddTag("garfield")
+    inst:AddTag("strongstomach")  -- no sanity hit from monster meat
+
     -- ---- Stats ----
     inst.components.health:SetMaxHealth(150)
     inst.components.hunger:SetMax(250)
     inst.components.sanity:SetMax(100)
 
-    -- Eats more (he IS a big cat)
     inst.components.hunger.hungerrate = TUNING.WILSON_HUNGER_RATE * 1.25
-
-    -- Lazy cat: slightly slower than Wilson by default
     inst.components.locomotor.walkspeed = TUNING.WILSON_WALK_SPEED * 0.9
     inst.components.locomotor.runspeed  = TUNING.WILSON_RUN_SPEED  * 0.9
 
-    -- ---- Diet ----
-    -- Omnivore; strongstomach tag prevents the monster-meat sanity hit
-    inst.components.eater:SetDiet(
-        { GetTableWithDefault(FOODTYPE, "MEAT", true),
-          GetTableWithDefault(FOODTYPE, "VEGGIE", true),
-          GetTableWithDefault(FOODTYPE, "GENERIC", true) },
-        { GetTableWithDefault(FOODTYPE, "MEAT", true),
-          GetTableWithDefault(FOODTYPE, "VEGGIE", true),
-          GetTableWithDefault(FOODTYPE, "GENERIC", true) }
-    )
-
-    -- Eating callback
+    -- ---- Eating ----
     local old_oneatenfn = inst.components.eater.oneatenfn
     inst.components.eater.oneatenfn = function(eater, food)
         if old_oneatenfn then old_oneatenfn(eater, food) end
@@ -116,18 +98,13 @@ local function master_postinit(inst)
     end
 
     -- ---- Monday Blues ----
-    -- Listen for the global "newday" event (fired every dawn)
-    inst:ListenForEvent("newday", OnNewDay, TheWorld)
+    inst:ListenForEvent("newday", function() OnNewDay(inst) end)
+    inst:DoTaskInTime(0, function() OnNewDay(inst) end)
 
-    -- Check immediately in case the mod is loaded mid-run on day 1/8/15/…
-    inst:DoTaskInTime(0, function(inst)
-        OnNewDay(inst)
-    end)
-
-    -- ---- Start ----
+    -- ---- Starting state ----
     inst.components.health:SetPercent(1)
     inst.components.hunger:SetPercent(0.75)
     inst.components.sanity:SetPercent(0.75)
 end
 
-return MakePlayerCharacter("garfield", {}, assets, common_postinit, master_postinit, start_inv)
+return MakePlayerCharacter("garfield", {}, assets, postinit, start_inv)

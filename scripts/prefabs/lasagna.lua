@@ -15,7 +15,7 @@ local function fn(Sim)
 
     MakeInventoryPhysics(inst)
 
-    inst.AnimState:SetBank("lasagna")
+    inst.AnimState:SetBank("carrot")   -- reuse carrot bank (has idle anim)
     inst.AnimState:SetBuild("lasagna")
     inst.AnimState:PlayAnimation("idle")
 
