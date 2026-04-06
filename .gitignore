@@ -1,3 +1,4 @@
 .claude/
 tools/__pycache__/
 *.pyc
+atlas.png

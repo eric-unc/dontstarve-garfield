@@ -40,6 +40,12 @@ def parse_buildbин(data):
     name        = data[20:20+name_len].rstrip(b'\x00').decode()
     offset = 20 + name_len
 
+    # Atlas name table (sits between build name and symbol table)
+    num_atlases = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
+    for _ in range(num_atlases):
+        alen = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4
+        offset += alen  # skip atlas name string
+
     symbols = []
     for _ in range(num_symbols):
         sym_hash   = struct.unpack('<I', data[offset:offset+4])[0]; offset += 4

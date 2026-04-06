@@ -33,8 +33,8 @@ local function ApplyMondayBlues(inst)
     if inst._monday_task then inst._monday_task:Cancel() end
     inst._monday_task = inst:DoTaskInTime(MONDAY_BLUES_DURATION, function(inst)
         inst._monday_blues = false
-        inst.components.locomotor.walkspeed = TUNING.WILSON_WALK_SPEED * 0.9
-        inst.components.locomotor.runspeed  = TUNING.WILSON_RUN_SPEED  * 0.9
+        inst.components.locomotor.walkspeed = TUNING.WILSON_WALK_SPEED * 1.1
+        inst.components.locomotor.runspeed  = TUNING.WILSON_RUN_SPEED  * 1.1
     end)
 end
 
@@ -84,11 +84,11 @@ local function postinit(inst)
     -- ---- Stats ----
     inst.components.health:SetMaxHealth(150)
     inst.components.hunger:SetMax(250)
-    inst.components.sanity:SetMax(100)
+    inst.components.sanity:SetMax(150)
 
     inst.components.hunger.hungerrate = TUNING.WILSON_HUNGER_RATE * 1.25
-    inst.components.locomotor.walkspeed = TUNING.WILSON_WALK_SPEED * 0.9
-    inst.components.locomotor.runspeed  = TUNING.WILSON_RUN_SPEED  * 0.9
+    inst.components.locomotor.walkspeed = TUNING.WILSON_WALK_SPEED * 1.1
+    inst.components.locomotor.runspeed  = TUNING.WILSON_RUN_SPEED  * 1.1
 
     -- ---- Eating ----
     local old_oneatenfn = inst.components.eater.oneatenfn
